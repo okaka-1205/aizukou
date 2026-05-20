@@ -39,17 +39,17 @@ public class NewMonoBehaviourScript : MonoBehaviour
     private void Jump()
     
     {
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)//check if the space key is pressed and player is grounded
-        {
-            rb.AddForce(new Vector2(0, jumpforce), ForceMode2D.Impulse);//apply an upward force to the player to make it jump
-            isGrounded = false;
-        }
+    if (Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer))//check if the player is grounded by checking for overlaps with the ground layer
+    {
+        isGrounded = true;
     }
-
-    private void OnCollisionEnter2D(Collision2D collision)
-    {   if (collision.gameObject.CompareTag("Ground"))//check if the player collides with an object tagged as "Ground"
-        {
-        isGrounded = true;//set isGrounded to true when the player collides with the ground
-        }
-    }   
+    else
+    {
+        isGrounded = false;
+    }
+    if ((Input.GetKeyDown(KeyCode.Space)||Input.GetKeyDown(KeyCode.W)) && isGrounded)//check if the space key is pressed and the player is grounded
+    {
+        rb.AddForce(Vector2.up * jumpforce, ForceMode2D.Impulse);//apply an upward force to the player's rigidbody to make it jump
+    }
+    }
 }
