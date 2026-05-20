@@ -1,55 +1,132 @@
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody2D), typeof(SpriteRenderer), typeof(Collider2D))]
 public class NewMonoBehaviourScript : MonoBehaviour
 {
-    [SerializeField] private float movespeed = 5.0f;//speed of the player movement
-    [SerializeField] private float jumpforce = 5.0f;//force applied to the player when jumping
-    [SerializeField] private LayerMask groundLayer;//layer mask for the ground
-    [SerializeField] private Transform groundCheck;//transform used to check if the player is grounded 
-    [SerializeField] private float groundCheckRadius = 0.1f;//radius of the ground check circle
-    private Rigidbody2D rb;//reference to the player's rigidbody component
-    private SpriteRenderer sr;//reference to the player's sprite renderer component
-    private bool isGrounded;//check if the player is on the ground
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    [SerializeField] private float movespeed = 5.0f;//プレイヤー移動の速度
+    [SerializeField] private float jumpforce = 5.0f;//ジャンプ時に加える力
+    [SerializeField] private LayerMask groundLayer;//地面と壁判定に使うレイヤーマスク
+    [SerializeField] private float groundCheckRadius = 0.1f;//地面判定用の円の半径（Gizmosとフォールバック用）
+    [SerializeField] private float groundCheckDistance = 0.2f;//プレイヤーの下方向に地面判定を探す距離
+    [SerializeField] private float groundCheckWidthMultiplier = 0.9f;//コライダーに対する地面判定ボックスの横幅倍率
+    [SerializeField] private float groundCheckThickness = 0.06f;//地面判定ボックスの厚み
+    [SerializeField] private float wallCheckDistance = 0.1f;//壁判定に使う距離
+    private Rigidbody2D rb;//プレイヤーの Rigidbody2D 参照
+    private SpriteRenderer sr;//プレイヤーの SpriteRenderer 参照
+    private Collider2D bodyCollider;//プレイヤーの Collider2D 参照
+    private bool jumpRequest = false;
+
+    private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         sr = GetComponent<SpriteRenderer>();
+        bodyCollider = GetComponent<Collider2D>();
     }
 
-    // Update is called once per frame
-    void Update()
+    private void Update()
     {
         Walk();
-        Jump();
+        CheckJumpInput();
     }
+
     private void Walk()
     {
-        float direction = Input.GetAxisRaw("Horizontal");//get the horizontal input axis (A/D or Left/Right arrow keys)
-        rb.linearVelocity = new Vector2(direction * movespeed, rb.linearVelocity.y);//set the player's velocity based on the input and movespeed
-    if (direction > 0)
-    {
-        sr.flipX = true;
+        float direction = Input.GetAxisRaw("Horizontal");
+        rb.linearVelocity = new Vector2(direction * movespeed, rb.linearVelocity.y);
+
+        if (direction > 0)
+        {
+            sr.flipX = true;
+        }
+        else if (direction < 0)
+        {
+            sr.flipX = false;
+        }
     }
-    else if (direction < 0)
+
+    private void CheckJumpInput()
     {
-        sr.flipX = false;
+        if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.W) || Input.GetButtonDown("Jump"))
+        {
+            jumpRequest = true;
+        }
     }
-    }
-    private void Jump()
-    
+
+    private void FixedUpdate()
     {
-    if (Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer))//check if the player is grounded by checking for overlaps with the ground layer
-    {
-        isGrounded = true;
+        HandleJumpPhysics();
     }
-    else
+
+    private void HandleJumpPhysics()
     {
-        isGrounded = false;
+        if (groundLayer == 0)
+        {
+            Debug.LogWarning("groundLayer is not set on " + name + ". Fallback to any collider below the player.");
+        }
+
+        bool isGrounded = IsGrounded();
+
+        if (jumpRequest && isGrounded)
+        {
+            rb.AddForce(Vector2.up * jumpforce, ForceMode2D.Impulse);
+        }
+
+        jumpRequest = false;
     }
-    if ((Input.GetKeyDown(KeyCode.Space)||Input.GetKeyDown(KeyCode.W)) && isGrounded)//check if the space key is pressed and the player is grounded
+
+    private bool IsGrounded()
     {
-        rb.AddForce(Vector2.up * jumpforce, ForceMode2D.Impulse);//apply an upward force to the player's rigidbody to make it jump
+        if (bodyCollider == null)
+        {
+            return false;
+        }
+
+        Bounds bounds = bodyCollider.bounds;
+        Vector2 boxSize = new Vector2(bounds.size.x * groundCheckWidthMultiplier, groundCheckThickness);
+        Vector2 boxCenter = new Vector2(bounds.center.x, bounds.min.y - groundCheckThickness * 0.5f);
+        Vector2 castOrigin = new Vector2(boxCenter.x, boxCenter.y + groundCheckThickness * 0.5f);
+
+        int layerMask = groundLayer != 0 ? groundLayer : Physics2D.AllLayers;
+        RaycastHit2D[] hits = Physics2D.BoxCastAll(castOrigin, boxSize, 0f, Vector2.down, groundCheckDistance, layerMask);
+
+        foreach (RaycastHit2D hit in hits)
+        {
+            if (hit.collider != null && hit.collider != bodyCollider)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (bodyCollider == null)
+        {
+            bodyCollider = GetComponent<Collider2D>();
+        }
+
+        if (bodyCollider == null)
+        {
+            return;
+        }
+
+        Bounds bounds = bodyCollider.bounds;
+        Vector2 boxSize = new Vector2(bounds.size.x * groundCheckWidthMultiplier, groundCheckThickness);
+        Vector2 boxCenter = new Vector2(bounds.center.x, bounds.min.y - groundCheckThickness * 0.5f);
+        Vector2 castOrigin = new Vector2(boxCenter.x, boxCenter.y + groundCheckThickness * 0.5f);
+
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireCube(boxCenter, new Vector3(boxSize.x, boxSize.y, 0f));
+        Gizmos.DrawLine(castOrigin, castOrigin + Vector2.down * groundCheckDistance);
+
+        Bounds wallBounds = bodyCollider.bounds;
+        Vector2 leftCheck = new Vector2(wallBounds.min.x - wallCheckDistance * 0.5f, wallBounds.center.y);
+        Vector2 rightCheck = new Vector2(wallBounds.max.x + wallCheckDistance * 0.5f, wallBounds.center.y);
+
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(leftCheck, wallCheckDistance);
+        Gizmos.DrawWireSphere(rightCheck, wallCheckDistance);
     }
 }
