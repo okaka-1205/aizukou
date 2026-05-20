@@ -4,6 +4,9 @@ public class NewMonoBehaviourScript : MonoBehaviour
 {
     [SerializeField] private float movespeed = 5.0f;//speed of the player movement
     [SerializeField] private float jumpforce = 5.0f;//force applied to the player when jumping
+    [SerializeField] private LayerMask groundLayer;//layer mask for the ground
+    [SerializeField] private Transform groundCheck;//transform used to check if the player is grounded 
+    [SerializeField] private float groundCheckRadius = 0.1f;//radius of the ground check circle
     private Rigidbody2D rb;//reference to the player's rigidbody component
     private SpriteRenderer sr;//reference to the player's sprite renderer component
     private bool isGrounded;//check if the player is on the ground
