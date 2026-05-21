@@ -15,6 +15,7 @@ public class NewMonoBehaviourScript : MonoBehaviour
     private SpriteRenderer sr;//プレイヤーの SpriteRenderer 参照
     private Collider2D bodyCollider;//プレイヤーの Collider2D 参照
     private bool jumpRequest = false;
+    private float horizontalInput = 0f;
 
     private void Awake()
     {
@@ -25,23 +26,33 @@ public class NewMonoBehaviourScript : MonoBehaviour
 
     private void Update()
     {
-        Walk();
+        ReadInput();
         CheckJumpInput();
     }
 
-    private void Walk()
+    private void FixedUpdate()
     {
-        float direction = Input.GetAxisRaw("Horizontal");
-        rb.linearVelocity = new Vector2(direction * movespeed, rb.linearVelocity.y);
+        WalkPhysics();
+        HandleJumpPhysics();
+    }
 
-        if (direction > 0)
+    private void ReadInput()
+    {
+        horizontalInput = Input.GetAxisRaw("Horizontal");
+
+        if (horizontalInput > 0)
         {
             sr.flipX = true;
         }
-        else if (direction < 0)
+        else if (horizontalInput < 0)
         {
             sr.flipX = false;
         }
+    }
+
+    private void WalkPhysics()
+    {
+        rb.linearVelocity = new Vector2(horizontalInput * movespeed, rb.linearVelocity.y);
     }
 
     private void CheckJumpInput()
@@ -50,11 +61,6 @@ public class NewMonoBehaviourScript : MonoBehaviour
         {
             jumpRequest = true;
         }
-    }
-
-    private void FixedUpdate()
-    {
-        HandleJumpPhysics();
     }
 
     private void HandleJumpPhysics()
