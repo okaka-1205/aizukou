@@ -3,6 +3,9 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody2D), typeof(SpriteRenderer), typeof(Collider2D))]
 public class NewMonoBehaviourScript : MonoBehaviour
 {
+    // このスクリプトはプレイヤーの横移動とジャンプを制御します
+    // Rigidbody2D、SpriteRenderer、Collider2D が必要です
+
     [SerializeField] private float movespeed = 5.0f;//プレイヤー移動の速度
     [SerializeField] private float jumpforce = 5.0f;//ジャンプ時に加える力
     [SerializeField] private LayerMask groundLayer;//地面と壁判定に使うレイヤーマスク
@@ -11,9 +14,13 @@ public class NewMonoBehaviourScript : MonoBehaviour
     [SerializeField] private float groundCheckWidthMultiplier = 0.9f;//コライダーに対する地面判定ボックスの横幅倍率
     [SerializeField] private float groundCheckThickness = 0.06f;//地面判定ボックスの厚み
     [SerializeField] private float wallCheckDistance = 0.1f;//壁判定に使う距離
+
+    // 実行時に取得されるコンポーネント参照
     private Rigidbody2D rb;//プレイヤーの Rigidbody2D 参照
     private SpriteRenderer sr;//プレイヤーの SpriteRenderer 参照
     private Collider2D bodyCollider;//プレイヤーの Collider2D 参照
+
+    // 入力を一時的に保持する変数
     private bool jumpRequest = false;
     private float horizontalInput = 0f;
 
@@ -26,12 +33,14 @@ public class NewMonoBehaviourScript : MonoBehaviour
 
     private void Update()
     {
+        // 毎フレーム、キーボード入力を読み取る
         ReadInput();
         CheckJumpInput();
     }
 
     private void FixedUpdate()
     {
+        // 物理演算に関連する処理は FixedUpdate で行う
         WalkPhysics();
         HandleJumpPhysics();
     }
@@ -52,6 +61,7 @@ public class NewMonoBehaviourScript : MonoBehaviour
 
     private void WalkPhysics()
     {
+        // Rigidbody2D の速度を直接セットして、横移動を制御する
         rb.linearVelocity = new Vector2(horizontalInput * movespeed, rb.linearVelocity.y);
     }
 
@@ -65,6 +75,7 @@ public class NewMonoBehaviourScript : MonoBehaviour
 
     private void HandleJumpPhysics()
     {
+        // ジャンプ入力があったとき、地面に接していればジャンプする
         if (groundLayer == 0)
         {
             Debug.LogWarning("groundLayer is not set on " + name + ". Fallback to any collider below the player.");
@@ -77,6 +88,7 @@ public class NewMonoBehaviourScript : MonoBehaviour
             rb.AddForce(Vector2.up * jumpforce, ForceMode2D.Impulse);
         }
 
+        // ジャンプ要求は一度処理したらリセットする
         jumpRequest = false;
     }
 
@@ -92,6 +104,7 @@ public class NewMonoBehaviourScript : MonoBehaviour
         Vector2 boxCenter = new Vector2(bounds.center.x, bounds.min.y - groundCheckThickness * 0.5f);
         Vector2 castOrigin = new Vector2(boxCenter.x, boxCenter.y + groundCheckThickness * 0.5f);
 
+        // ボックスキャストで足元に地面があるかを調べる
         int layerMask = groundLayer != 0 ? groundLayer : Physics2D.AllLayers;
         RaycastHit2D[] hits = Physics2D.BoxCastAll(castOrigin, boxSize, 0f, Vector2.down, groundCheckDistance, layerMask);
 
