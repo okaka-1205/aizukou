@@ -1,7 +1,8 @@
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D), typeof(SpriteRenderer), typeof(Collider2D))]
-public class NewMonoBehaviourScript : MonoBehaviour
+public class Player_Programming1 : MonoBehaviour
+
 {
     // このスクリプトはプレイヤーの横移動とジャンプを制御します
     // Rigidbody2D、SpriteRenderer、Collider2D が必要です
